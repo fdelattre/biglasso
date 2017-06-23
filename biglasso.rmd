@@ -1,0 +1,45 @@
+---
+title: "Biglasso on CA-CF datamart"
+output: html_notebook
+---
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/', warning=FALSE, message=FALSE)
+```
+
+```{r, message=FALSE}
+require(biglasso)
+require(bigtabulate)
+```
+
+
+
+```{r}
+xfname <- 'dtm_cross201512.csv' # raw data file for design matrix, ~ 1GB
+if(file.exists('dtm_cross201512.desc')){
+  datadesc <- dget('dtm_cross201512.desc')
+  X <- attach.big.matrix(datadesc)
+}else{
+  X <- setupX(xfname, sep = ';',
+            header = T,
+            type = 'double') # create backing files (.bin, .desc)
+}
+  
+y <- sub.big.matrix(X, firstCol = ncol(X), lastCol = ncol(X))
+X <- sub.big.matrix(X, firstCol = 2, lastCol = ncol(X)-1)
+
+```
+
+Tentative biglasso
+```{r}
+
+library(doParallel)
+cl<-makeCluster(spec = 2)
+registerDoParallel(cl = cl)
+
+time.fit <- system.time(
+  fit <- biglasso(X, y, family = 'binomial', screen = 'SSR-BEDPP', ncores = 3)
+)
+
+ stopCluster(cl)
+```
+
